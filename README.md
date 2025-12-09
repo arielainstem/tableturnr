@@ -1,36 +1,238 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TableTurnr
 
-## Getting Started
+A flexible reservation and resource management system designed for arbitrary start and end times, admin-defined availability windows, and configurable booking rules.
 
-First, run the development server:
+- [TableTurnr](#tableturnr)
+  - [Overview](#overview)
+  - [Problem](#problem)
+  - [Solution](#solution)
+  - [Features](#features)
+    - [User Features](#user-features)
+    - [Admin Features](#admin-features)
+    - [System Features](#system-features)
+  - [Architecture](#architecture)
+    - [Tech Stack](#tech-stack)
+    - [High-Level Structure](#high-level-structure)
+  - [Data Model](#data-model)
+    - [Resource](#resource)
+    - [Reservation](#reservation)
+    - [AvailabilityWindow](#availabilitywindow)
+    - [Blockout](#blockout)
+    - [User](#user)
+  - [Core Logic Summary](#core-logic-summary)
+  - [Roadmap](#roadmap)
+  - [Setup Instructions](#setup-instructions)
+  - [License](#license)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Overview
+
+TableTurnr is a domain-agnostic scheduling system that allows admins to create resources (rooms, tables, lab equipment, studios, etc.) and users to reserve them through a flexible, interval-based booking flow.
+
+The system supports:
+
+- Flexible date and time ranges
+- Single-day or multi-day booking modes
+- Conflict detection using interval logic
+- Admin-controlled availability windows
+- Resource categories and metadata
+- User dashboards for upcoming reservations
+
+## Problem
+
+Most reservations tools are strictly coupled to their specific industry (restaurants, gyms, labs). They assume fixed time slots, fixed durations, or domain-specific workflows. This makes them difficult to extend, reuse, or adapt to different environments.
+
+## Solution
+
+TableTurnr takes a domain-agnostic approach:
+
+- Admins define what a “resource” is
+- Users can reserve flexible time intervals
+- Conflict detection is consistent for any category
+- Availability rules are configurable
+- The booking logic is reusable across multiple domains
+
+This creates a scalable, adaptable, engineering-focused scheduling platform that can support real-world use cases in labs, event spaces, co-working rooms, equipment scheduling, and more.
+
+## Features
+
+### User Features
+
+- Browse resources by category
+- View resource availability
+- Create reservations with flexible start/end times
+- See conflict warnings before submitting
+- Manage upcoming and past reservations
+- Edit/cancel personal reservations
+
+### Admin Features
+
+- Create/edit/delete resources
+- Set availability windows
+- Define blockout periods (maintenance, closures)
+- Toggle between Single-Day Mode or Multi-Day Mode
+- View all reservations in a global calendar
+- Manage user roles (optional)
+
+### System Features
+
+- Interval-based conflict detection
+- Validation against availability rules
+- Domain-agnostic resource model
+- Clean API layer (or Server Actions)
+- PostgreSQL + Prisma
+- Responsiveness and dark/light mode
+
+## Architecture
+
+### Tech Stack
+
+|             |                                                     |
+| ----------- | --------------------------------------------------- |
+| Framework:  | Next.js (App Router)                                |
+| Language:   | TypeScript                                          |
+| Styling:    | Tailwind CSS                                        |
+| ORM:        | Prisma                                              |
+| Database:   | PostgreSQL                                          |
+| State/Data: | React Query or Server Actions (currently undecided) |
+| Auth:       | NextAuth or custom solution                         |
+| Deployment: | Vercel + external database (Neon/Supabase)          |
+
+### High-Level Structure
+
+```
+/app
+  /admin
+    /resources
+    /availability
+    /blockouts
+    /settings (booking mode)
+  /reservations
+  /resources
+  /dashboard
+  /api (if I choose not use Server Actions)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Data Model
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Resource
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+id: string
+name: string
+category: string
+capacity?: number
+location?: string
+description?: string
+createdAt: Date
+updatedAt: Date
+```
 
-## Learn More
+### Reservation
 
-To learn more about Next.js, take a look at the following resources:
+```
+id: string
+userId: string
+resourceId: string
+startDateTime: Date
+endDateTime: Date
+status: 'CONFIRMED' | 'CANCELLED'
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### AvailabilityWindow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+id: string
+resourceId: string
+dayOfWeek: number
+startTime: string
+endTime: string
+```
 
-## Deploy on Vercel
+### Blockout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+id: string
+resourceId: string
+startDateTime: Date
+endDateTime: Date
+reason: string
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### User
+
+```
+id: string
+name: string
+email: string
+role: 'ADMIN' | 'USER'
+```
+
+## Core Logic Summary
+
+**Interval Conflict Detection**
+
+```ts
+// conflict exists when:
+newStart < existingEnd && newEnd > existingStart;
+```
+
+**Booking Mode Rules**
+
+- Single-Day Mode: start and end must be on the same date
+- Multi-Day Mode: reservation may span multiple days
+
+**Availability Enforcement**
+
+- Check reservation times against availability windows for that resource
+- Validate blockout overlaps
+
+## Roadmap
+
+**MVP**
+
+- Resource CRUD
+- Availability windows
+- Reservation creation
+- Conflict detection
+- Single-day mode
+- User dashboard
+
+**Next**
+
+- Multi-day reservation support
+- Blockouts
+- Admin global calendar
+- Search/filter resources
+- Email notifications (optional)
+
+**Future**
+
+- Custom booking rules per resource type
+- Custom duration constraints
+- Analytics
+- Exportable calendar integrations (iCal)
+
+## Setup Instructions
+
+```bash
+git clone https://github.com/arielainstem/tableturnr
+cd tableturnr
+
+npm install
+
+cp .env.example .env
+# add database URL, auth secrets, etc.
+
+npx prisma migrate dev
+npm run dev
+```
+
+## License
+
+This project is open-source under the MIT License.
+
+You are free to use, modify, and distribute this software for both personal and commercial purposes, as long as the original license and copyright notice are included.
+
+See the [LICENSE](./LICENSE) file for full details.
+
+© 2025 Ariela Israel. Released under the MIT License.
